@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NC II Questionnaire Quiz</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">NC II Reviewer</p>
+          <h1>Bar Operations Quiz</h1>
+        </div>
+        <div class="score-pill" aria-live="polite">
+          {% if submitted %}
+            {{ score }}/{{ total }} score
+          {% else %}
+            {{ total }} questions
+          {% endif %}
+        </div>
+      </header>
+
+      <section class="status-panel" aria-label="Quiz status">
+        <div>
+          <span class="status-label">Progress</span>
+          <div class="progress-track">
+            <div
+              class="progress-fill"
+              style="width: {% if submitted %}100{% else %}0{% endif %}%"
+            ></div>
+          </div>
+        </div>
+        <div class="result-box {% if submitted %}strong{% endif %}">
+          {% if submitted %}
+            Score: {{ score }}/{{ total }} ({{ ((score / total) * 100) | round | int }}%). Review the highlighted answers below.
+          {% else %}
+            Answer the questions, then submit to see your score.
+          {% endif %}
+        </div>
+      </section>
+
+      <nav class="section-tabs" aria-label="Question sections">
+        <a class="tab-button active" href="#questions">All Questions</a>
+        {% for group in quiz %}
+          <a class="tab-button" href="#section-{{ loop.index }}">{{ group.section.replace("Part ", "") }}</a>
+        {% endfor %}
+      </nav>
+
+      <form method="post" action="/">
+        <section id="questions" class="question-list" aria-label="Questions">
+          {% set question_number = namespace(value=1) %}
+          {% for group in quiz %}
+            <div id="section-{{ loop.index }}" class="section-anchor"></div>
+            {% for item in group.questions %}
+              {% set number = question_number.value %}
+              {% set selected = selected_answers.get(number, "") %}
+              <article class="question-card" id="question-{{ number }}">
+                <div class="question-header">
+                  <div class="number">{{ number }}</div>
+                  <div>
+                    <p class="section-name">{{ group.section }}</p>
+                    <p class="question-text">{{ item.question }}</p>
+                  </div>
+                </div>
+
+                <div class="option-list">
+                  {% for key, label in item.options.items() %}
+                    {% set is_correct = submitted and key == item.answer %}
+                    {% set is_wrong = submitted and selected == key and key != item.answer %}
+                    <label class="option {% if is_correct %}correct{% endif %} {% if is_wrong %}incorrect{% endif %}">
+                      <input
+                        type="radio"
+                        name="q{{ number }}"
+                        value="{{ key }}"
+                        {% if selected == key %}checked{% endif %}
+                        {% if submitted %}disabled{% endif %}
+                      />
+                      <span><span class="option-key">{{ key }}.</span> {{ label }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+
+                {% if submitted %}
+                  {% if not selected %}
+                    <div class="feedback wrong">Not answered. Correct answer: {{ item.answer }}.</div>
+                  {% elif selected == item.answer %}
+                    <div class="feedback right">Correct.</div>
+                  {% else %}
+                    <div class="feedback wrong">Your answer: {{ selected }}. Correct answer: {{ item.answer }}.</div>
+                  {% endif %}
+                {% endif %}
+              </article>
+              {% set question_number.value = question_number.value + 1 %}
+            {% endfor %}
+          {% endfor %}
+        </section>
+
+        <footer class="actions">
+          <a class="button secondary button-link" href="/">Reset</a>
+          {% if not submitted %}
+            <button class="button primary" type="submit">Submit Answers</button>
+          {% endif %}
+        </footer>
+      </form>
+    </main>
+  </body>
+</html>
